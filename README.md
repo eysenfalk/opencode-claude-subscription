@@ -12,7 +12,7 @@
 
 # opencode-claude-subscription
 
-**Use your Claude Pro/Max subscription in OpenCode v2.** Log in once, keep OpenCode's built-in `anthropic` provider, and every Claude model runs on your plan.
+**Use your Claude Pro/Max subscription in OpenCode v2.** Log in once, keep OpenCode's built-in `anthropic` provider, and send your Claude requests through your plan instead of API billing.
 
 ```sh
 opencode plugin add opencode-claude-subscription
@@ -35,6 +35,7 @@ TOOL_ROUNDTRIP_42
 - **Changes as little as possible.** It adds the identity line, the headers, and tool names that the subscription endpoint expects. Heavier workarounds are opt-in.
 - **Nothing extra to run.** No proxy, no background service, no runtime dependencies.
 - **API keys are unaffected.** Only requests carrying a subscription token are touched.
+- **No misleading costs.** While a subscription login is active, OpenCode shows Anthropic models at zero per-token cost, because the plan covers usage.
 
 | | this plugin | [opencode-claude-auth](https://github.com/griffinmartin/opencode-claude-auth) | [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) |
 |---|---|---|---|
@@ -79,6 +80,7 @@ Only requests authenticated with a subscription token (`sk-ant-oat…`) are touc
 - **Headers:** Claude Code's `user-agent` and `x-app`, plus the `claude-code-20250219` and `oauth-2025-04-20` betas, merged with the betas OpenCode already sends. OpenCode's `x-opencode-*` and session-affinity headers are removed. A subscription token stored as an API key is moved to bearer auth.
 - **System prompt:** Claude Code's identity line becomes its own first system block. The rest of OpenCode's system prompt stays in place, including cache breakpoints.
 - **Tool names:** tools that match a Claude Code tool keep its exact name (`read` → `Read`, `webfetch` → `WebFetch`). Every other flat tool becomes an MCP-shaped alias (`shell` → `mcp__opencode__shell`). Tool definitions, `tool_choice`, and tool calls in the history are renamed consistently. Tool calls in the response stream are translated back, so OpenCode only ever sees its own names.
+- **Token counting:** `/v1/messages/count_tokens` requests are shaped the same way as `/v1/messages`.
 - **Env block:** OpenCode's `<env>` block is classified as third-party usage when "Workspace root folder:" appears together with "Is directory a git repo:". The plugin renames the first line to "Workspace root:".
 
 ## Options
@@ -116,17 +118,20 @@ Only requests authenticated with a subscription token (`sk-ant-oat…`) are touc
 **I get "Third-party apps now draw from your extra usage…"**
 Anthropic classified the request as third-party. Set `debugLog`, reproduce the error, and compare the logged system text and tools with a request that worked. Setting `relocateSystem: true` usually unblocks you right away. Please [open an issue](https://github.com/eysenfalk/opencode-claude-subscription/issues/new?template=blocked-request.yml) with the phrase that triggers it, or add it to `systemReplacements`.
 
-**The browser login fails with "Port 53692 is in use".**
-Use the paste-code method.
+**A request fails with "…expired or was revoked. Run `opencode auth login anthropic` again…"**
+Anthropic rejected the token (HTTP 401). Log in again. If you use the Claude Code login, running `claude` once refreshes the token, and OpenCode picks it up on the next request. A failed token refresh does not break OpenCode: the plugin keeps the current token and retries the refresh after 30 seconds.
 
-**"The Claude Code login has expired."**
-Run `claude` once, or switch to one of the subscription login methods.
+**The browser login says "Port 53692 is in use" although nothing else is running.**
+Starting a new login closes the callback server of an earlier, abandoned attempt. If another program uses the port, use the paste-code method.
 
 **Does it change anything when I use an API key?**
 No. Requests without a subscription token pass through unchanged.
 
 **Are my tokens written anywhere?**
 OpenCode stores the credential like any other login. The plugin never logs headers or tokens. `debugLog` records request bodies only.
+
+**Why does the Claude Code login show a `file://` link instead of opening a browser?**
+It shows where the login is read from (`~/.claude/.credentials.json`, or the macOS Keychain). There is nothing to authorize in a browser.
 
 **How do I update or remove it?**
 `opencode plugin update opencode-claude-subscription` or `opencode plugin remove opencode-claude-subscription`. Restart OpenCode afterwards, or run `opencode service restart` if you use the background service.
@@ -136,7 +141,7 @@ OpenCode stores the credential like any other login. The plugin never logs heade
 | Component | Version |
 |---|---|
 | OpenCode | 2.0.16 (plugin SDK 2.0.18) |
-| Model | `claude-haiku-4-5`: plain replies and tool calls with aliased names |
+| Model | `claude-haiku-4-5`: plain replies and tool calls with aliased names. Other models are not verified yet. |
 | Login | Claude Code reuse, end to end. The browser flow is verified up to the authorization URL. |
 
 Tested another setup? Please [report it](https://github.com/eysenfalk/opencode-claude-subscription/issues/new?template=compatibility.yml) so this table can grow.

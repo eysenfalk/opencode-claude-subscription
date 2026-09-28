@@ -2,12 +2,11 @@ import { execFile } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 import type { Credential } from "@opencode/plugin"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/promise/integration"
 import { INTEGRATION_ID, METHOD } from "./constants.ts"
-
-const REFRESH_MARGIN = 5 * 60 * 1000
 
 interface StoredLogin {
   claudeAiOauth?: {
@@ -32,16 +31,15 @@ export function claudeCodeMethod(): IntegrationOAuthMethodRegistration {
       const current = await readClaudeCode()
       return {
         mode: "auto",
-        url: "https://claude.ai/settings/usage",
+        // OpenCode only opens http(s) links, so pointing at the source shows it without opening a browser.
+        url: claudeCodeSource(),
         instructions: `Using the Claude Code login (${current.metadata?.subscription ?? "subscription"}). Claude Code must keep running occasionally to refresh it.`,
         callback: Promise.resolve(current),
       }
     },
-    refresh: async () => {
-      const current = await readClaudeCode()
-      if (current.expires > Date.now() + REFRESH_MARGIN) return current
-      throw new Error("The Claude Code login has expired. Run `claude` once to refresh it, then retry.")
-    },
+    // Re-read whatever Claude Code has stored, even if it is expired: a rejected refresh surfaces
+    // in OpenCode as an unexpected error, while Anthropic's 401 gets an actionable hint.
+    refresh: (value) => readClaudeCode().catch(() => value),
     label: (value) => {
       const subscription = value.metadata?.subscription
       return typeof subscription === "string" ? `Claude Code (${subscription})` : "Claude Code"
@@ -66,8 +64,15 @@ export async function readClaudeCode(env = process.env): Promise<Credential.OAut
 }
 
 function readCredentialsFile(env: NodeJS.ProcessEnv) {
-  const dir = env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")
-  return readFile(join(dir, ".credentials.json"), "utf8")
+  return readFile(credentialsPath(env), "utf8")
+}
+
+function credentialsPath(env: NodeJS.ProcessEnv) {
+  return join(env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), ".credentials.json")
+}
+
+export function claudeCodeSource(env = process.env, platform = process.platform) {
+  return platform === "darwin" ? "keychain://Claude%20Code-credentials" : pathToFileURL(credentialsPath(env)).href
 }
 
 async function readKeychain() {

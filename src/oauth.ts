@@ -15,6 +15,12 @@ import {
 } from "./constants.ts"
 
 const LOGIN_TIMEOUT = 10 * 60 * 1000
+const REFRESH_RETRY_DELAY = 30 * 1000
+
+/** The callback server of the login attempt that is still waiting, if any. */
+let pending: { server: Server; cancel: (error: Error) => void } | undefined
+/** Refresh tokens whose last refresh failed, with the time of that failure. */
+const failedRefresh = new Map<string, number>()
 
 interface TokenResponse {
   access_token: string
@@ -41,7 +47,9 @@ export function browserMethod(): IntegrationOAuthMethodRegistration {
       const callback = code
         .then((value) => exchange(value, state, redirect, pkce))
         .then((tokens) => credential(METHOD.browser, tokens))
-        .finally(() => server.close())
+        .finally(() => close(server))
+      // OpenCode stops awaiting a cancelled attempt; keep its later rejection from going unhandled.
+      callback.catch(() => {})
       return {
         mode: "auto",
         url: authorizeURL(redirect, pkce, state),
@@ -50,7 +58,7 @@ export function browserMethod(): IntegrationOAuthMethodRegistration {
         callback,
       }
     },
-    refresh: (value) => refresh(METHOD.browser, value),
+    refresh: (value) => refreshOrKeep(METHOD.browser, value),
     label,
   }
 }
@@ -74,7 +82,7 @@ export function manualMethod(): IntegrationOAuthMethodRegistration {
         },
       }
     },
-    refresh: (value) => refresh(METHOD.manual, value),
+    refresh: (value) => refreshOrKeep(METHOD.manual, value),
     label,
   }
 }
@@ -134,6 +142,24 @@ export async function refresh(methodID: string, value: Credential.OAuth) {
   } as Credential.OAuth
 }
 
+/**
+ * OpenCode turns a rejected refresh into an unexpected-error defect. Keeping the current
+ * credential instead lets the request reach Anthropic, whose 401 gets an actionable hint
+ * (see `explainAuthError`). Failed refreshes are retried at most every 30 seconds.
+ */
+export async function refreshOrKeep(methodID: string, value: Credential.OAuth, now = Date.now()) {
+  const failed = failedRefresh.get(value.refresh)
+  if (!value.refresh || (failed !== undefined && now - failed < REFRESH_RETRY_DELAY)) return value
+  try {
+    const next = await refresh(methodID, value)
+    failedRefresh.delete(value.refresh)
+    return next
+  } catch {
+    failedRefresh.set(value.refresh, now)
+    return value
+  }
+}
+
 async function postToken(body: Record<string, string>): Promise<TokenResponse> {
   const response = await fetch(TOKEN_URL, {
     method: "POST",
@@ -164,6 +190,11 @@ function credential(methodID: string, tokens: TokenResponse): Credential.OAuth {
 }
 
 async function listen(state: string): Promise<{ server: Server; code: Promise<string> }> {
+  // A cancelled attempt would otherwise hold the port until its timeout and block the retry.
+  if (pending) {
+    pending.cancel(new Error("Replaced by a newer login attempt"))
+    await close(pending.server)
+  }
   const { createServer } = await import("node:http")
   let settle!: { resolve: (code: string) => void; reject: (error: Error) => void }
   const code = new Promise<string>((resolve, reject) => (settle = { resolve, reject }))
@@ -189,8 +220,22 @@ async function listen(state: string): Promise<{ server: Server; code: Promise<st
     server.listen(CALLBACK_PORT, CALLBACK_HOST, resolve)
   })
   const timer = setTimeout(() => settle.reject(new Error("Login timed out")), LOGIN_TIMEOUT)
-  code.finally(() => clearTimeout(timer)).catch(() => {})
+  pending = { server, cancel: settle.reject }
+  code
+    .finally(() => {
+      clearTimeout(timer)
+      if (pending?.server === server) pending = undefined
+    })
+    .catch(() => {})
   return { server, code }
+}
+
+function close(server: Server) {
+  return new Promise<void>((resolve) => {
+    if (!server.listening) return resolve()
+    server.close(() => resolve())
+    server.closeAllConnections()
+  })
 }
 
 function page(message: string) {

@@ -69,3 +69,23 @@ export function rewriteJson(text: string, fromWire: ReadonlyMap<string, string>)
     return text
   }
 }
+
+export const AUTH_HINT =
+  "Your Claude subscription login is expired or was revoked. Run `opencode auth login anthropic` again, or run `claude` once if you use the Claude Code login."
+
+/** Adds a next step to Anthropic's 401 for subscription requests; other responses pass through. */
+export async function explainAuthError(response: Response) {
+  if (response.status !== 401) return response
+  const text = await response.text()
+  const headers = new Headers(response.headers)
+  headers.delete("content-length")
+  const init = { status: response.status, statusText: response.statusText, headers }
+  try {
+    const parsed = JSON.parse(text)
+    if (typeof parsed?.error?.message !== "string") return new Response(text, init)
+    parsed.error.message = `${parsed.error.message} ${AUTH_HINT}`
+    return new Response(JSON.stringify(parsed), init)
+  } catch {
+    return new Response(text, init)
+  }
+}
