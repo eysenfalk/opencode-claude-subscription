@@ -11,6 +11,15 @@
     "subscription"
   ],
   "license": "MIT",
+  "author": "eysenfalk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eysenfalk/opencode-claude-subscription.git"
+  },
+  "homepage": "https://github.com/eysenfalk/opencode-claude-subscription#readme",
+  "bugs": {
+    "url": "https://github.com/eysenfalk/opencode-claude-subscription/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,13 +28,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./server": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    "./server": "./src/index.ts"
   },
   "files": [
     "dist",
+    "src",
     "server.js",
     "README.md",
     "LICENSE"
@@ -38,9 +45,6 @@
   },
   "engines": {
     "node": ">=24"
-  },
-  "peerDependencies": {
-    "@opencode/plugin": ">=2.0.16"
   },
   "devDependencies": {
     "@opencode/plugin": "2.0.18",

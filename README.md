@@ -15,7 +15,7 @@ The plugin adds subscription login methods to the Anthropic integration and shap
 ## Install
 
 ```sh
-opencode plugin add github:eysenfalk/opencode-claude-subscription
+opencode plugin add opencode-claude-subscription
 opencode auth login anthropic
 ```
 
