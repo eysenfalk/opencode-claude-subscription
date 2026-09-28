@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-28
+
 ### Added
 - README with quick start, comparison, request flow diagram, FAQ and compatibility table.
 - CI (typecheck, offline tests, build, Bun load check) and a tag-driven npm release with provenance.
@@ -17,5 +19,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - Built-in rename of OpenCode's "Workspace root folder:" env line, which Anthropic classified as third-party usage.
 - Opt-in `relocateSystem`, `billingHeader`, `toolAliases`, `systemReplacements` and `debugLog` options.
 
-[Unreleased]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/eysenfalk/opencode-claude-subscription/releases/tag/v0.1.0
