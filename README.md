@@ -14,18 +14,12 @@ The plugin adds subscription login methods to the Anthropic integration and shap
 
 ## Install
 
-```jsonc
-// ~/.config/opencode/opencode.json
-{
-  "plugins": ["opencode-claude-subscription"]
-}
-```
-
-Then log in:
-
 ```sh
+opencode plugin add github:eysenfalk/opencode-claude-subscription
 opencode auth login anthropic
 ```
+
+`opencode plugin add` installs the plugin and adds it to your global config. No build step is needed: OpenCode runs the TypeScript source directly.
 
 Pick one of the methods the plugin adds:
 
@@ -92,7 +86,7 @@ npm run typecheck
 npm run build
 ```
 
-To try a checkout locally, point OpenCode at the directory. OpenCode loads `server.js` from the package root:
+To try a checkout locally, point OpenCode at the directory. OpenCode loads `server.js` from the package root, which re-exports `src/index.ts`:
 
 ```jsonc
 { "plugins": ["/path/to/opencode-claude-subscription"] }
