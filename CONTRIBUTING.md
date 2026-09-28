@@ -2,6 +2,8 @@
 
 Thanks for helping. The most useful contributions are reports of request shapes that Anthropic rejects, and fixes that keep the plugin small.
 
+Before changing login, token handling, headers or request shaping, read [docs/anthropic-subscription-auth.md](docs/anthropic-subscription-auth.md). It records how Anthropic's OAuth flow and classifiers behave, which projects to compare against, and how to investigate failures. Update it in the same pull request when you learn something new.
+
 ## Report a rejected request
 
 1. Enable the debug log in your plugin entry: `"options": { "debugLog": "/tmp/claude-subscription.jsonl" }`.
@@ -22,6 +24,7 @@ Try a checkout in OpenCode by pointing a plugin entry at the directory (remove t
 ## Guidelines
 
 - Keep request changes minimal and explain why each one is needed, ideally with the bisected trigger.
+- Record new or changed Anthropic behavior in `docs/anthropic-subscription-auth.md`, with the date and how you confirmed it.
 - Add a test for every request or response transformation.
 - Never log headers, tokens or credentials.
 - Update `CHANGELOG.md` under "Unreleased".

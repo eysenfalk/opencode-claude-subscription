@@ -8,6 +8,7 @@ body:
         Thanks! The fastest fix starts with the smallest text that triggers the rejection.
         Enable `"debugLog"` in the plugin options, reproduce, and remove system blocks or tools one at a time.
         **Do not paste whole logs**: they contain your prompts.
+        Known fingerprints and the bisection method: https://github.com/eysenfalk/opencode-claude-subscription/blob/main/docs/anthropic-subscription-auth.md
   - type: textarea
     id: error
     attributes:
