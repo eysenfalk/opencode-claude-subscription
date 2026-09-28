@@ -1,6 +1,6 @@
 {
   "name": "opencode-claude-subscription",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "OpenCode v2 plugin: use your Claude Pro/Max subscription with OpenCode's built-in Anthropic provider.",
   "keywords": [
     "opencode",

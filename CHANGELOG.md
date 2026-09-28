@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-09-28
+
+### Fixed
+- Token requests (login and refresh) now mirror Claude Code's own: axios `User-Agent` and `Accept` headers, the same field order, and `scope` on refresh. Anthropic answers some clients' token requests with 429 "Rate limited" regardless of volume; with Claude Code's request shape the same endpoint processes them.
+- Token requests retry rate limits and server errors up to three rounds over both token hosts (1 s and 2 s apart, honoring `Retry-After`), within 30 s for logins and 10 s for refreshes. Errors name each host's status.
+
 ## [0.1.3] - 2026-09-28
 
 ### Fixed
@@ -41,7 +47,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Built-in rename of OpenCode's "Workspace root folder:" env line, which Anthropic classified as third-party usage.
 - Opt-in `relocateSystem`, `billingHeader`, `toolAliases`, `systemReplacements` and `debugLog` options.
 
-[Unreleased]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.0...v0.1.1

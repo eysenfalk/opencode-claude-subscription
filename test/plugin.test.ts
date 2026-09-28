@@ -6,11 +6,12 @@ import { afterEach, test } from "node:test"
 import plugin, { shapeRequest } from "../src/index.ts"
 import { claudeCodeMethod, claudeCodeSource } from "../src/claude-code.ts"
 import { CALLBACK_PATH, CALLBACK_PORT } from "../src/constants.ts"
-import { browserMethod, refreshOrKeep } from "../src/oauth.ts"
+import { browserMethod, refreshOrKeep, tokenRetry } from "../src/oauth.ts"
 import { parseOptions } from "../src/options.ts"
 import { AUTH_HINT, explainAuthError } from "../src/response.ts"
 
 const realFetch = globalThis.fetch
+tokenRetry.delays = [0, 0]
 afterEach(() => {
   globalThis.fetch = realFetch
 })
@@ -139,10 +140,10 @@ test("a failed refresh keeps the current credential and backs off before retryin
   const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-backoff", expires: 0 } as never
   assert.equal(await refreshOrKeep("m", current, 1_000), current)
   assert.equal(await refreshOrKeep("m", current, 20_000), current)
-  // One attempt per token host, then nothing until the backoff has passed.
-  assert.equal(calls, 2)
+  // Three rounds over both token hosts, then nothing until the backoff has passed.
+  assert.equal(calls, 6)
   await refreshOrKeep("m", current, 40_000)
-  assert.equal(calls, 4)
+  assert.equal(calls, 12)
 })
 
 test("a rate-limited token host falls back to the next one", async () => {
@@ -155,7 +156,7 @@ test("a rate-limited token host falls back to the next one", async () => {
   }) as typeof fetch
   const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-fallback", expires: 0 } as never
   const next: any = await refreshOrKeep("m", current)
-  assert.deepEqual(hosts, ["claude.ai", "platform.claude.com"])
+  assert.deepEqual(hosts, ["platform.claude.com", "claude.ai"])
   assert.equal(next.access, "new")
 })
 
@@ -221,4 +222,25 @@ test("a new browser login frees the port held by an abandoned attempt", async ()
   const response = await realFetch(`http://127.0.0.1:${CALLBACK_PORT}${CALLBACK_PATH}?error=access_denied`)
   assert.equal(response.status, 400)
   await assert.rejects(second.callback, /access_denied/)
+})
+
+test("token requests mirror Claude Code's axios request", async () => {
+  let seen: { headers: Headers; body: string } | undefined
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    seen = { headers: new Headers(init.headers), body: String(init.body) }
+    return Response.json({ access_token: "new", refresh_token: "rt-5", expires_in: 3600 })
+  }) as typeof fetch
+  const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-shape", expires: 0 } as never
+  await refreshOrKeep("m", current)
+  assert.equal(seen!.headers.get("user-agent"), "axios/1.15.2")
+  assert.equal(seen!.headers.get("accept"), "application/json, text/plain, */*")
+  assert.equal(seen!.headers.get("content-type"), "application/json")
+  assert.deepEqual(Object.keys(JSON.parse(seen!.body)), ["grant_type", "refresh_token", "client_id", "scope"])
+})
+
+test("a rate limit that outlasts the retries reports every host", async () => {
+  globalThis.fetch = (async () => new Response("{}", { status: 429 })) as typeof fetch
+  const { refresh } = await import("../src/oauth.ts")
+  const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-report", expires: 0 } as never
+  await assert.rejects(refresh("m", current), /platform\.claude\.com: 429.*claude\.ai: 429/)
 })

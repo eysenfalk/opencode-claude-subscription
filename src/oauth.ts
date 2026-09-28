@@ -11,11 +11,15 @@ import {
   MANUAL_REDIRECT_URI,
   METHOD,
   SCOPES,
+  TOKEN_HEADERS,
   TOKEN_URLS,
 } from "./constants.ts"
 
 const LOGIN_TIMEOUT = 10 * 60 * 1000
 const REFRESH_RETRY_DELAY = 30 * 1000
+const LOGIN_BUDGET = 30 * 1000
+/** Refresh runs inline before a model request, so it gives up sooner than a login. */
+const REFRESH_BUDGET = 10 * 1000
 
 /** The callback server of the login attempt that is still waiting, if any. */
 let pending: { server: Server; cancel: (error: Error) => void } | undefined
@@ -122,18 +126,22 @@ export function parseCode(input: string): { code?: string; state?: string } {
 }
 
 function exchange(code: string, state: string, redirect: string, pkce: Pkce) {
+  // Same fields and order as Claude Code's exchange.
   return postToken({
     grant_type: "authorization_code",
-    client_id: CLIENT_ID,
     code,
-    state,
     redirect_uri: redirect,
+    client_id: CLIENT_ID,
     code_verifier: pkce.verifier,
+    state,
   })
 }
 
 export async function refresh(methodID: string, value: Credential.OAuth) {
-  const tokens = await postToken({ grant_type: "refresh_token", client_id: CLIENT_ID, refresh_token: value.refresh })
+  const tokens = await postToken(
+    { grant_type: "refresh_token", refresh_token: value.refresh, client_id: CLIENT_ID, scope: SCOPES },
+    REFRESH_BUDGET,
+  )
   const next = credential(methodID, tokens)
   return {
     ...next,
@@ -160,33 +168,45 @@ export async function refreshOrKeep(methodID: string, value: Credential.OAuth, n
   }
 }
 
-async function postToken(body: Record<string, string>): Promise<TokenResponse> {
-  let failure: Error | undefined
-  for (const url of TOKEN_URLS) {
-    let response: Response
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(30_000),
-      })
-    } catch (error) {
-      failure = error instanceof Error ? error : new Error(String(error))
-      continue
+/** Waits between rounds over all token hosts; tests shorten them. */
+export const tokenRetry = { delays: [1000, 2000] }
+
+async function postToken(body: Record<string, string>, budget = LOGIN_BUDGET): Promise<TokenResponse> {
+  const deadline = Date.now() + budget
+  const failures: string[] = []
+  for (let round = 0; ; round++) {
+    let retryAfter = 0
+    for (const url of TOKEN_URLS) {
+      const host = new URL(url).host
+      let response: Response
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers: TOKEN_HEADERS,
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(Math.max(1, Math.min(30_000, deadline - Date.now()))),
+        })
+      } catch (error) {
+        failures.push(`${host}: ${error instanceof Error ? error.message : String(error)}`)
+        continue
+      }
+      const text = await response.text()
+      if (response.ok) {
+        const parsed = JSON.parse(text) as TokenResponse
+        if (!parsed.access_token) throw new Error("Anthropic token response did not contain an access token")
+        return parsed
+      }
+      // Rate limits and server errors are per host and often short-lived; any other status is the real answer.
+      if (response.status !== 429 && response.status < 500)
+        throw new Error(`Anthropic token request failed (${response.status} from ${host}): ${text.slice(0, 500)}`)
+      failures.push(`${host}: ${response.status}`)
+      retryAfter = Math.max(retryAfter, (Number(response.headers.get("retry-after")) || 0) * 1000)
     }
-    const text = await response.text()
-    if (!response.ok) {
-      failure = new Error(`Anthropic token request failed (${response.status}): ${text.slice(0, 500)}`)
-      // Rate limits and server errors are per host; any other status is the real answer.
-      if (response.status === 429 || response.status >= 500) continue
-      throw failure
-    }
-    const parsed = JSON.parse(text) as TokenResponse
-    if (!parsed.access_token) throw new Error("Anthropic token response did not contain an access token")
-    return parsed
+    const delay = Math.max(tokenRetry.delays[round] ?? -1, Math.min(retryAfter, 10_000))
+    if (round >= tokenRetry.delays.length || Date.now() + delay >= deadline)
+      throw new Error(`Anthropic token request failed after retries (${failures.join(", ")})`)
+    await new Promise((resolve) => setTimeout(resolve, delay))
   }
-  throw failure ?? new Error("Anthropic token request failed")
 }
 
 function credential(methodID: string, tokens: TokenResponse): Credential.OAuth {

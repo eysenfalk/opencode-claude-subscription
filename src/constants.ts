@@ -10,10 +10,17 @@ export const METHOD = {
 export const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 export const AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
 /**
- * Tried in order. platform.claude.com and console.anthropic.com share a rate limit that answers
- * 429 without Retry-After for long stretches, while claude.ai kept serving the same requests.
+ * Tried in order: Claude Code's own endpoint first, then claude.ai, which serves the same grants.
+ * Anthropic answers some clients' token requests with 429 "Rate limited" regardless of volume
+ * (plain curl always, real logins from OpenCode observed), so requests also mirror Claude Code.
  */
-export const TOKEN_URLS = ["https://claude.ai/v1/oauth/token", "https://platform.claude.com/v1/oauth/token"]
+export const TOKEN_URLS = ["https://platform.claude.com/v1/oauth/token", "https://claude.ai/v1/oauth/token"]
+/** Claude Code talks to the token endpoint through axios; these are the headers axios sends (Claude Code 2.1.283). */
+export const TOKEN_HEADERS = {
+  "Content-Type": "application/json",
+  Accept: "application/json, text/plain, */*",
+  "User-Agent": "axios/1.15.2",
+}
 export const MANUAL_REDIRECT_URI = "https://platform.claude.com/oauth/code/callback"
 export const CALLBACK_HOST = "127.0.0.1"
 export const CALLBACK_PORT = 53692
