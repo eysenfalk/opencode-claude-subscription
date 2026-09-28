@@ -19,7 +19,14 @@ opencode plugin add opencode-claude-subscription
 opencode auth login anthropic
 ```
 
-`opencode plugin add` installs the plugin and adds it to your global config. No build step is needed: OpenCode runs the TypeScript source directly.
+`opencode plugin add` installs the plugin from npm and adds it to your global config (`~/.config/opencode/opencode.json`). Restart OpenCode afterwards, or run `opencode service restart` if you use the background service.
+
+To update or remove it:
+
+```sh
+opencode plugin update opencode-claude-subscription
+opencode plugin remove opencode-claude-subscription
+```
 
 Pick one of the methods the plugin adds:
 
@@ -86,11 +93,17 @@ npm run typecheck
 npm run build
 ```
 
-To try a checkout locally, point OpenCode at the directory. OpenCode loads `server.js` from the package root, which re-exports `src/index.ts`:
+To try a checkout locally, remove the npm package first, then point OpenCode at the directory. If both are configured, the plugin loads twice and every login method shows up twice.
+
+```sh
+opencode plugin remove opencode-claude-subscription
+```
 
 ```jsonc
 { "plugins": ["/path/to/opencode-claude-subscription"] }
 ```
+
+OpenCode loads `server.js` from the package root, which re-exports `src/index.ts`, so no build is needed.
 
 ## Credits
 
