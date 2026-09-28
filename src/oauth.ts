@@ -11,7 +11,7 @@ import {
   MANUAL_REDIRECT_URI,
   METHOD,
   SCOPES,
-  TOKEN_URL,
+  TOKEN_URLS,
 } from "./constants.ts"
 
 const LOGIN_TIMEOUT = 10 * 60 * 1000
@@ -161,17 +161,32 @@ export async function refreshOrKeep(methodID: string, value: Credential.OAuth, n
 }
 
 async function postToken(body: Record<string, string>): Promise<TokenResponse> {
-  const response = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
-  })
-  const text = await response.text()
-  if (!response.ok) throw new Error(`Anthropic token request failed (${response.status}): ${text.slice(0, 500)}`)
-  const parsed = JSON.parse(text) as TokenResponse
-  if (!parsed.access_token) throw new Error("Anthropic token response did not contain an access token")
-  return parsed
+  let failure: Error | undefined
+  for (const url of TOKEN_URLS) {
+    let response: Response
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
+      })
+    } catch (error) {
+      failure = error instanceof Error ? error : new Error(String(error))
+      continue
+    }
+    const text = await response.text()
+    if (!response.ok) {
+      failure = new Error(`Anthropic token request failed (${response.status}): ${text.slice(0, 500)}`)
+      // Rate limits and server errors are per host; any other status is the real answer.
+      if (response.status === 429 || response.status >= 500) continue
+      throw failure
+    }
+    const parsed = JSON.parse(text) as TokenResponse
+    if (!parsed.access_token) throw new Error("Anthropic token response did not contain an access token")
+    return parsed
+  }
+  throw failure ?? new Error("Anthropic token request failed")
 }
 
 function credential(methodID: string, tokens: TokenResponse): Credential.OAuth {

@@ -139,9 +139,35 @@ test("a failed refresh keeps the current credential and backs off before retryin
   const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-backoff", expires: 0 } as never
   assert.equal(await refreshOrKeep("m", current, 1_000), current)
   assert.equal(await refreshOrKeep("m", current, 20_000), current)
-  assert.equal(calls, 1)
-  await refreshOrKeep("m", current, 40_000)
+  // One attempt per token host, then nothing until the backoff has passed.
   assert.equal(calls, 2)
+  await refreshOrKeep("m", current, 40_000)
+  assert.equal(calls, 4)
+})
+
+test("a rate-limited token host falls back to the next one", async () => {
+  const hosts: string[] = []
+  globalThis.fetch = (async (url: string) => {
+    hosts.push(new URL(url).host)
+    return hosts.length === 1
+      ? new Response('{"error":{"type":"rate_limit_error"}}', { status: 429 })
+      : Response.json({ access_token: "new", refresh_token: "rt-3", expires_in: 3600 })
+  }) as typeof fetch
+  const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-fallback", expires: 0 } as never
+  const next: any = await refreshOrKeep("m", current)
+  assert.deepEqual(hosts, ["claude.ai", "platform.claude.com"])
+  assert.equal(next.access, "new")
+})
+
+test("a definitive token error is not retried on another host", async () => {
+  let calls = 0
+  globalThis.fetch = (async () => {
+    calls++
+    return new Response('{"error":"invalid_grant"}', { status: 400 })
+  }) as typeof fetch
+  const current = { type: "oauth", methodID: "m", access: "old", refresh: "rt-dead", expires: 0 } as never
+  assert.equal(await refreshOrKeep("m", current), current)
+  assert.equal(calls, 1)
 })
 
 test("a successful refresh returns the new tokens", async () => {

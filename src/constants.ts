@@ -9,7 +9,11 @@ export const METHOD = {
 
 export const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 export const AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
-export const TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
+/**
+ * Tried in order. platform.claude.com and console.anthropic.com share a rate limit that answers
+ * 429 without Retry-After for long stretches, while claude.ai kept serving the same requests.
+ */
+export const TOKEN_URLS = ["https://claude.ai/v1/oauth/token", "https://platform.claude.com/v1/oauth/token"]
 export const MANUAL_REDIRECT_URI = "https://platform.claude.com/oauth/code/callback"
 export const CALLBACK_HOST = "127.0.0.1"
 export const CALLBACK_PORT = 53692

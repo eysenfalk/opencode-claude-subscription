@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-28
+
+### Fixed
+- Login and refresh use `claude.ai/v1/oauth/token` first and fall back to `platform.claude.com` on rate limits or server errors. During testing `platform.claude.com` rate limited token requests for over an hour, so logins failed after the browser step.
+
 ## [0.1.2] - 2026-09-28
 
 ### Added
@@ -36,7 +41,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Built-in rename of OpenCode's "Workspace root folder:" env line, which Anthropic classified as third-party usage.
 - Opt-in `relocateSystem`, `billingHeader`, `toolAliases`, `systemReplacements` and `debugLog` options.
 
-[Unreleased]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/eysenfalk/opencode-claude-subscription/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/eysenfalk/opencode-claude-subscription/releases/tag/v0.1.0
