@@ -1,0 +1,29 @@
+name: Bug report
+description: Something else is broken (login, refresh, tool calls, crashes)
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: OpenCode and plugin versions
+      placeholder: "OpenCode 2.0.16, plugin 0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      description: Remove tokens and personal data first.
+      render: text

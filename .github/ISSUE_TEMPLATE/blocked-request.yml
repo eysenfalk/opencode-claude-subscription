@@ -1,0 +1,46 @@
+name: Blocked request
+description: Anthropic rejects a request ("Third-party apps now draw from your extra usage…" or similar)
+labels: [blocked-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! The fastest fix starts with the smallest text that triggers the rejection.
+        Enable `"debugLog"` in the plugin options, reproduce, and remove system blocks or tools one at a time.
+        **Do not paste whole logs**: they contain your prompts.
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: trigger
+    attributes:
+      label: Smallest triggering text or tool
+      description: The system text, env line or tool name that makes the difference, if you found it.
+  - type: input
+    id: opencode
+    attributes:
+      label: OpenCode version
+      placeholder: "2.0.16"
+    validations:
+      required: true
+  - type: input
+    id: plugin
+    attributes:
+      label: Plugin version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: anthropic/claude-opus-5
+  - type: textarea
+    id: plugins
+    attributes:
+      label: Other OpenCode plugins
+      description: Other plugins add prompt text and tools, which can change the result.

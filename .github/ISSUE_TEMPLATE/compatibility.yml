@@ -1,0 +1,39 @@
+name: Compatibility report
+description: Tell us which setup works (or doesn't)
+labels: [compatibility]
+body:
+  - type: input
+    id: opencode
+    attributes:
+      label: OpenCode version
+    validations:
+      required: true
+  - type: input
+    id: plugin
+    attributes:
+      label: Plugin version
+    validations:
+      required: true
+  - type: dropdown
+    id: login
+    attributes:
+      label: Login method
+      options: [browser, paste code, Claude Code reuse]
+    validations:
+      required: true
+  - type: input
+    id: plan
+    attributes:
+      label: Plan
+      placeholder: Pro, Max 5x, Max 20x
+  - type: textarea
+    id: models
+    attributes:
+      label: Models tested and result
+      placeholder: "claude-opus-5: works, tool calls OK"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS

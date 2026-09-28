@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1280px; height: 640px; }
+  body {
+    background: radial-gradient(circle at 85% 10%, #3b2a1f 0%, #14120f 55%);
+    color: #f2ede6; font-family: "Inter", "DejaVu Sans", sans-serif;
+    display: flex; flex-direction: column; justify-content: center; padding: 0 96px; box-sizing: border-box;
+  }
+  .eyebrow { font: 600 22px "JetBrainsMonoNL Nerd Font Mono", monospace; color: #d97757; letter-spacing: .04em; }
+  h1 { font-size: 64px; line-height: 1.05; margin: 18px 0 14px; letter-spacing: -.02em; }
+  p { font-size: 28px; color: #b9b0a5; margin: 0 0 44px; }
+  .term {
+    background: #0c0b0a; border: 1px solid #2e2a25; border-radius: 14px; padding: 26px 32px;
+    font: 24px/1.7 "JetBrainsMonoNL Nerd Font Mono", monospace; width: 860px;
+  }
+  .p { color: #d97757; } .ok { color: #8fbf7f; } .dim { color: #7d756c; }
+</style>
+<div class="eyebrow">OPENCODE V2 PLUGIN</div>
+<h1>Your Claude Pro/Max plan,<br>inside OpenCode.</h1>
+<p>One install. Native v2 hooks. No proxy, no extra service.</p>
+<div class="term">
+  <div><span class="p">$</span> opencode plugin add opencode-claude-subscription</div>
+  <div><span class="p">$</span> opencode auth login anthropic</div>
+  <div><span class="ok">◇</span> Connected to Anthropic <span class="dim">· Claude Max</span></div>
+</div>

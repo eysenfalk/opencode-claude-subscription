@@ -5,8 +5,12 @@
   "keywords": [
     "opencode",
     "opencode-plugin",
+    "opencode-v2",
     "anthropic",
     "claude",
+    "claude-code",
+    "claude-max",
+    "claude-pro",
     "oauth",
     "subscription"
   ],
